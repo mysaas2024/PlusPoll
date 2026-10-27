@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: plusepoll-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["poll-api:5000"]
+        labels:
+          service: plusepoll
+          environment: development
+  - job_name: plusepoll-vote-worker
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["vote-worker:5001"]
+        labels:
+          service: plusepoll-worker
+          environment: development

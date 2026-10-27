@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum PollStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         UserRole @default(USER)
+
+  polls        Poll[]
+  votes        Vote[]
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Poll {
+  id          String     @id @default(uuid()) @db.Uuid
+  title       String     @db.VarChar(200)
+  description String?    @db.Text
+  status      PollStatus @default(DRAFT)
+
+  creatorId   String     @db.Uuid @map("creator_id")
+  creator     User       @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+
+  options     PollOption[]
+  votes       Vote[]
+
+  startsAt    DateTime?  @map("starts_at")
+  endsAt      DateTime?  @map("ends_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@index([status, endsAt])
+  @@index([creatorId, createdAt])
+  @@map("polls")
+}
+
+model PollOption {
+  id        String   @id @default(uuid()) @db.Uuid
+  text      String   @db.VarChar(200)
+
+  pollId    String   @db.Uuid @map("poll_id")
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  votes     Vote[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([pollId])
+  @@map("poll_options")
+}
+
+model Vote {
+  id        String     @id @default(uuid()) @db.Uuid
+
+  userId    String     @db.Uuid @map("user_id")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  pollId    String     @db.Uuid @map("poll_id")
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  optionId  String     @db.Uuid @map("option_id")
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  // A user can vote only once per poll.
+  @@unique([userId, pollId])
+  @@index([pollId, optionId])
+  @@index([userId, createdAt])
+  @@map("votes")
+}
